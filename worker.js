@@ -1,3 +1,5 @@
+// SporNRD v5 deploy
+
 const BASE = "https://www.tyf.gov.tr";
 const NEWS = BASE + "/haberler/";
 
