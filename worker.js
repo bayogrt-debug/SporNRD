@@ -1,5 +1,3 @@
-// SporNRD v5 deploy
-
 const BASE = "https://www.tyf.gov.tr";
 const NEWS = BASE + "/haberler/";
 
@@ -9,6 +7,32 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
+const CITY_MAP = [
+  ["ANKARA", "Ankara"],
+  ["ISTANBUL", "İstanbul"],
+  ["IZMIR", "İzmir"],
+  ["BURSA", "Bursa"],
+  ["ANTALYA", "Antalya"],
+  ["AYDIN", "Aydın"],
+  ["SAMSUN", "Samsun"],
+  ["TRABZON", "Trabzon"],
+  ["KONYA", "Konya"],
+  ["MERSIN", "Mersin"],
+  ["ORDU", "Ordu"],
+  ["NIGDE", "Niğde"],
+  ["KUTAHYA", "Kütahya"],
+  ["DIYARBAKIR", "Diyarbakır"],
+  ["GAZIANTEP", "Gaziantep"],
+  ["ESKISEHIR", "Eskişehir"],
+  ["KOCAELI", "Kocaeli"],
+  ["DENIZLI", "Denizli"],
+  ["MUGLA", "Muğla"],
+  ["ADANA", "Adana"],
+  ["KAYSERI", "Kayseri"],
+  ["SAKARYA", "Sakarya"],
+  ["TEKIRDAG", "Tekirdağ"],
+  ["BALIKESIR", "Balıkesir"]
+];
 
 export default {
 
@@ -16,15 +40,18 @@ export default {
 
     if (request.method === "OPTIONS") {
 
-      return new Response(null, {
-        status: 204,
-        headers: CORS
-      });
+      return new Response(
+        null,
+        {
+          status: 204,
+          headers: CORS
+        }
+      );
 
     }
 
-
-    const url = new URL(request.url);
+    const url =
+      new URL(request.url);
 
 
     if (url.pathname === "/") {
@@ -43,7 +70,7 @@ export default {
           "running",
 
         version:
-          "5.0.0"
+          "5.1.0"
 
       });
 
@@ -52,10 +79,13 @@ export default {
 
     if (url.pathname !== "/api/tyf") {
 
-      return send({
-        ok: false,
-        error: "Endpoint bulunamadı"
-      }, 404);
+      return send(
+        {
+          ok: false,
+          error: "Endpoint bulunamadı"
+        },
+        404
+      );
 
     }
 
@@ -70,14 +100,19 @@ export default {
 
 
       if (!Number.isFinite(limit)) {
+
         limit = 10;
+
       }
 
 
       limit =
         Math.max(
           1,
-          Math.min(limit, 20)
+          Math.min(
+            limit,
+            20
+          )
         );
 
 
@@ -126,22 +161,25 @@ export default {
 
     catch (error) {
 
-      return send({
+      return send(
+        {
 
-        ok: false,
+          ok: false,
 
-        error:
-          "TYF verileri alınamadı",
+          error:
+            "TYF verileri alınamadı",
 
-        detail:
-          String(
-            error &&
-            error.message
-              ? error.message
-              : error
-          )
+          detail:
+            String(
+              error &&
+              error.message
+                ? error.message
+                : error
+            )
 
-      }, 502);
+        },
+        502
+      );
 
     }
 
@@ -151,23 +189,32 @@ export default {
 
 
 // =====================================================
-// HABER LİSTESİ
+// HABERLER
 // =====================================================
 
 async function getNews(limit) {
 
   const html =
-    await getHtml(NEWS);
+    await getHtml(
+      NEWS
+    );
 
 
   const links =
     findLinks(html)
-      .slice(0, 25);
+      .slice(
+        0,
+        28
+      );
 
 
   const results =
     await Promise.allSettled(
-      links.map(readArticle)
+
+      links.map(
+        readArticle
+      )
+
     );
 
 
@@ -175,7 +222,8 @@ async function getNews(limit) {
 
     .filter(
       result =>
-        result.status === "fulfilled" &&
+        result.status ===
+        "fulfilled" &&
         result.value
     )
 
@@ -190,9 +238,36 @@ async function getNews(limit) {
     )
 
     .sort(
-      (a, b) =>
-        (b.timestamp || 0) -
-        (a.timestamp || 0)
+      (a, b) => {
+
+        const dateDiff =
+          Number(
+            b.timestamp || 0
+          ) -
+          Number(
+            a.timestamp || 0
+          );
+
+
+        if (
+          dateDiff !== 0
+        ) {
+
+          return dateDiff;
+
+        }
+
+
+        return (
+          Number(
+            b.relevanceScore || 0
+          ) -
+          Number(
+            a.relevanceScore || 0
+          )
+        );
+
+      }
     )
 
     .slice(
@@ -217,10 +292,13 @@ async function getHtml(url) {
         headers: {
 
           "Accept":
-            "text/html",
+            "text/html,application/xhtml+xml",
 
           "Accept-Language":
-            "tr-TR,tr;q=0.9"
+            "tr-TR,tr;q=0.9",
+
+          "User-Agent":
+            "SporNRD/5.1"
 
         }
 
@@ -232,7 +310,9 @@ async function getHtml(url) {
 
     throw new Error(
       "HTTP " +
-      response.status
+      response.status +
+      " - " +
+      url
     );
 
   }
@@ -244,19 +324,20 @@ async function getHtml(url) {
 
 
 // =====================================================
-// HABER LINKLERİ
+// HABER LİNKLERİ
 // =====================================================
 
 function findLinks(html) {
 
-  const list = [];
+  const list =
+    [];
 
   const used =
     new Set();
 
 
   const regex =
-    /href=["']([^"']*\/haber\/[^"']+\.html[^"']*)["']/gi;
+    /href=["']([^"']*\/haber\/[^"']+\.html(?:\?[^"']*)?)["']/gi;
 
 
   let match;
@@ -273,7 +354,9 @@ function findLinks(html) {
 
       url =
         new URL(
-          decode(match[1]),
+          decodeEntities(
+            match[1]
+          ),
           BASE
         ).href;
 
@@ -308,69 +391,125 @@ function findLinks(html) {
 
 
 // =====================================================
-// HABER DETAYI
+// TEK HABERİ OKU
 // =====================================================
 
 async function readArticle(url) {
 
-  const html =
-    await getHtml(url);
+  try {
+
+    const html =
+      await getHtml(url);
 
 
-  const originalTitle =
-    getTitle(html);
+    const originalTitle =
+      getTitle(html);
 
 
-  if (!originalTitle) {
+    if (!originalTitle) {
 
-    return null;
+      return null;
 
-  }
-
-
-  const originalText =
-    getBody(
-      html,
-      originalTitle
-    );
+    }
 
 
-  const analysis =
-    analyse(
-      originalTitle,
-      originalText
-    );
+    const articleRegion =
+      getArticleRegion(
+        html
+      );
 
 
-  if (!analysis.keep) {
-
-    return null;
-
-  }
-
-
-  const date =
-    getDate(html);
+    const originalText =
+      getBody(
+        articleRegion,
+        originalTitle
+      );
 
 
-  const location =
-    getLocation(
-      originalTitle +
-      " " +
-      originalText
-    );
+    const analysis =
+      analyse(
+        originalTitle,
+        originalText
+      );
 
 
-  const image =
-    getImage(html);
+    if (!analysis.keep) {
+
+      return null;
+
+    }
 
 
-  const pdfUrl =
-    getPdf(html);
+    const date =
+      getDate(
+        articleRegion ||
+        html
+      );
 
 
-  const editorial =
-    createEditorial({
+    const location =
+      getLocation(
+        originalTitle,
+        originalText
+      );
+
+
+    const image =
+      getImage(
+        html
+      );
+
+
+    const pdfUrl =
+      getPdf(
+        articleRegion ||
+        html
+      );
+
+
+    const editorial =
+      createEditorial({
+
+        originalTitle:
+          originalTitle,
+
+        originalText:
+          originalText,
+
+        category:
+          analysis.category,
+
+        audience:
+          analysis.audience,
+
+        location:
+          location,
+
+        pdfUrl:
+          pdfUrl
+
+      });
+
+
+    return {
+
+      id:
+        makeId(url),
+
+      externalId:
+        makeId(url),
+
+
+      // SporNRD'nin gösterdiği başlık
+
+      title:
+        editorial.title,
+
+      summary:
+        editorial.summary,
+
+
+      // Kaynağın gerçek metni
 
       originalTitle:
         originalTitle,
@@ -378,113 +517,340 @@ async function readArticle(url) {
       originalText:
         originalText,
 
+
+      editorial:
+        true,
+
+      editorialLabel:
+        "SporNRD Özeti",
+
+      editorialVersion:
+        "5.1.0",
+
+
+      source:
+        "Türkiye Yüzme Federasyonu",
+
+      sourceType:
+        "FEDERASYON",
+
+      verified:
+        true,
+
+      sport:
+        "Yüzme",
+
+
       category:
         analysis.category,
+
+      audience:
+        analysis.audience,
+
+      relevanceScore:
+        analysis.score,
+
+
+      urgency:
+        editorial.urgency,
+
+      actionLabel:
+        editorial.actionLabel,
+
+      tags:
+        editorial.tags,
+
+
+      date:
+        date.text,
+
+      timestamp:
+        date.time,
 
       location:
         location,
 
+      image:
+        image,
+
+      url:
+        url,
+
       pdfUrl:
-        pdfUrl
+        pdfUrl,
 
-    });
+      emoji:
+        getEmoji(
+          analysis.category
+        )
 
+    };
 
-  return {
+  }
 
-    id:
-      makeId(url),
+  catch (error) {
 
-    externalId:
-      makeId(url),
-
-
-    // SporNRD kullanıcısının gördüğü metin
-
-    title:
-      editorial.title,
-
-    summary:
-      editorial.summary,
-
-
-    // Orijinal kaynak bilgisi
-
-    originalTitle:
-      originalTitle,
-
-    originalText:
-      originalText,
-
-
-    editorial:
-      true,
-
-    editorialLabel:
-      "SporNRD Özeti",
-
-
-    source:
-      "Türkiye Yüzme Federasyonu",
-
-    sourceType:
-      "FEDERASYON",
-
-    verified:
-      true,
-
-    sport:
-      "Yüzme",
-
-    category:
-      analysis.category,
-
-    audience:
-      analysis.audience,
-
-    relevanceScore:
-      analysis.score,
-
-    urgency:
-      editorial.urgency,
-
-    actionLabel:
-      editorial.actionLabel,
-
-    tags:
-      editorial.tags,
-
-    date:
-      date.text,
-
-    timestamp:
-      date.time,
-
-    location:
-      location,
-
-    image:
-      image,
-
-    url:
+    console.log(
+      "TYF haber detayı okunamadı:",
       url,
+      String(error)
+    );
 
-    pdfUrl:
-      pdfUrl,
 
-    emoji:
-      getEmoji(
-        analysis.category
-      )
+    return null;
 
-  };
+  }
 
 }
 
 
 // =====================================================
-// KİMİ İLGİLENDİRİYOR?
-// DOĞRU KATEGORİ
+// SADECE GERÇEK HABER BÖLÜMÜ
+// =====================================================
+
+function getArticleRegion(html) {
+
+  const h1Close =
+    /<\/h1\s*>/i
+      .exec(html);
+
+
+  const start =
+    h1Close
+
+      ? h1Close.index +
+        h1Close[0].length
+
+      : 0;
+
+
+  const tail =
+    html.slice(start);
+
+
+  const stopMarkers = [
+
+    /Temsilcilikler/i,
+
+    /Üyelikler/i,
+
+    /Di(?:ğ|&#287;|&gbreve;)er\s+Haberler/i,
+
+    /Hizmet\s+Sözleşmesi/i,
+
+    /GENEL\s+KOŞULLAR/i
+
+  ];
+
+
+  let end =
+    tail.length;
+
+
+  for (
+    const marker
+    of stopMarkers
+  ) {
+
+    const found =
+      marker.exec(
+        tail
+      );
+
+
+    if (
+      found &&
+      found.index < end
+    ) {
+
+      end =
+        found.index;
+
+    }
+
+  }
+
+
+  return tail.slice(
+    0,
+    end
+  );
+
+}
+
+
+// =====================================================
+// HABER METNİ
+// =====================================================
+
+function getBody(
+  region,
+  title
+) {
+
+  if (!region) {
+
+    return "";
+
+  }
+
+
+  const parts =
+    [];
+
+
+  const regex =
+    /<(p|h2|h3|h4|h5|li)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+
+
+  let match;
+
+
+  while (
+    (match = regex.exec(region)) !== null
+  ) {
+
+    const text =
+      clean(
+        match[2]
+      );
+
+
+    if (
+      !text ||
+      text.length < 18
+    ) {
+
+      continue;
+
+    }
+
+
+    if (
+      normalize(text) ===
+      normalize(title)
+    ) {
+
+      continue;
+
+    }
+
+
+    if (
+      isNoiseText(text)
+    ) {
+
+      continue;
+
+    }
+
+
+    parts.push(text);
+
+  }
+
+
+  const unique =
+    [
+      ...new Set(
+        parts
+      )
+    ];
+
+
+  if (
+    unique.length > 0
+  ) {
+
+    return unique
+      .join(" ")
+      .slice(
+        0,
+        2200
+      );
+
+  }
+
+
+  const fallback =
+    clean(
+      region
+    );
+
+
+  return isNoiseText(
+    fallback
+  )
+
+    ? ""
+
+    : fallback.slice(
+        0,
+        1600
+      );
+
+}
+
+
+// =====================================================
+// ÇÖP METİNLER
+// =====================================================
+
+function isNoiseText(text) {
+
+  const value =
+    normalize(text);
+
+
+  const noise = [
+
+    "BILGILERI PDF FORMATINDA GORUNTULEMEK",
+
+    "PDF FORMATINDA GORUNTULEMEK",
+
+    "TIKLAYINIZ",
+
+    "TUM HAKLARI SAKLIDIR",
+
+    "TEMSILCILIKLER",
+
+    "UYELIKLER",
+
+    "DIGER HABERLER",
+
+    "HIZMET SOZLESMESI",
+
+    "GENEL KOSULLAR",
+
+    "IPTAL IADE KOSULLARI",
+
+    "KISISSEL BILGI GUVENLIGI",
+
+    "ODEME BILGILERI GUVENLIGI",
+
+    "KREDI KARTI",
+
+    "SPORCU VIZE ODEMESI",
+
+    "KVKK",
+
+    "CEREZ"
+
+  ];
+
+
+  return noise.some(
+    item =>
+      value.includes(
+        item
+      )
+  );
+
+}
+
+
+// =====================================================
+// KATEGORİ ANALİZİ
 // =====================================================
 
 function analyse(
@@ -504,22 +870,17 @@ function analyse(
     );
 
 
-  // -------------------------------------------------
-  // İSTEMEDİĞİMİZ KURUMSAL HABERLER
-  // -------------------------------------------------
+  // Kurumsal içerikleri alma
 
   if (
-    titleText.includes(
-      "GENEL KURUL"
-    ) ||
-    titleText.includes(
-      "DELEGE"
-    ) ||
-    titleText.includes(
-      "IHALE"
-    ) ||
-    titleText.includes(
-      "SATIN ALMA"
+    hasAny(
+      titleText,
+      [
+        "GENEL KURUL",
+        "DELEGE",
+        "IHALE",
+        "SATIN ALMA"
+      ]
     )
   ) {
 
@@ -542,28 +903,29 @@ function analyse(
   }
 
 
-  // -------------------------------------------------
-  // SPORCU
-  // Öncelik EĞİTİM kelimesinden önce.
-  // SEM hatasını böyle çözüyoruz.
-  // -------------------------------------------------
+  // Sporcu, SEM, TOHM
 
   if (
     titleText.includes(
       "SPORCU"
     ) ||
+
     titleText.includes(
       "SEM "
     ) ||
+
     titleText.includes(
       "SEM)"
     ) ||
+
     titleText.includes(
       "TOHM"
     ) ||
+
     titleText.includes(
       "MILLI TAKIM"
     ) ||
+
     titleText.includes(
       "MILLI SPORCU"
     )
@@ -588,9 +950,7 @@ function analyse(
   }
 
 
-  // -------------------------------------------------
-  // ANTRENÖR
-  // -------------------------------------------------
+  // Antrenör
 
   if (
     titleText.includes(
@@ -617,9 +977,7 @@ function analyse(
   }
 
 
-  // -------------------------------------------------
-  // YARIŞMA
-  // -------------------------------------------------
+  // Yarışma
 
   if (
     hasAny(
@@ -656,9 +1014,7 @@ function analyse(
   }
 
 
-  // -------------------------------------------------
-  // EĞİTİM
-  // -------------------------------------------------
+  // Eğitim
 
   if (
     hasAny(
@@ -690,9 +1046,7 @@ function analyse(
   }
 
 
-  // -------------------------------------------------
-  // DUYURU
-  // -------------------------------------------------
+  // Genel önemli duyuru
 
   if (
     hasAny(
@@ -747,15 +1101,23 @@ function analyse(
 
 
 // =====================================================
-// SPORNRD AKILLI EDİTÖR
+// SPORNRD EDİTÖR
 // =====================================================
 
-function createEditorial(data) {
+function createEditorial(
+  data
+) {
 
-  const normalized =
+  const n =
     normalize(
       data.originalTitle
     );
+
+
+  const tags =
+    [
+      "Yüzme"
+    ];
 
 
   let title =
@@ -768,21 +1130,13 @@ function createEditorial(data) {
     "normal";
 
 
-  const tags =
-    [
-      "Yüzme"
-    ];
-
-
-  // -------------------------------------------------
-  // SEM KAYIT HAKKI KAZANANLAR
-  // -------------------------------------------------
+  // SEM sonuçları
 
   if (
-    normalized.includes(
+    n.includes(
       "SEM"
     ) &&
-    normalized.includes(
+    n.includes(
       "KAYIT HAKKI KAZANAN"
     )
   ) {
@@ -803,21 +1157,19 @@ function createEditorial(data) {
   }
 
 
-  // -------------------------------------------------
-  // SEM / TOHM BAŞVURU
-  // -------------------------------------------------
+  // TOHM
 
   else if (
-    normalized.includes(
+    n.includes(
       "TOHM"
     ) &&
-    normalized.includes(
+    n.includes(
       "BASVURU"
     )
   ) {
 
     title =
-      "TOHM sporcu başvuruları için yeni bilgilendirme";
+      "TOHM sporcu başvurularında yeni dönem";
 
 
     actionLabel =
@@ -832,47 +1184,21 @@ function createEditorial(data) {
   }
 
 
-  else if (
-    normalized.includes(
-      "SEM"
-    ) &&
-    normalized.includes(
-      "BASLIYOR"
-    )
-  ) {
-
-    title =
-      "SEM yüzme sporcu alımları başlıyor 🏊";
-
-
-    actionLabel =
-      "Başvuruyu İncele";
-
-
-    tags.push(
-      "SEM",
-      "Başvuru"
-    );
-
-  }
-
-
-  // -------------------------------------------------
-  // ANTRENÖR VİZE
-  // -------------------------------------------------
+  // Antrenör vize
 
   else if (
-    normalized.includes(
+    n.includes(
       "ANTRENOR VIZE"
     )
   ) {
 
     title =
-      "Yüzme antrenörleri için vize duyurusu yayımlandı";
+      "Yüzme antrenörleri için vize işlemleri duyuruldu";
 
 
     actionLabel =
       "Vize Detayları";
+
 
     tags.push(
       "Antrenör",
@@ -882,15 +1208,13 @@ function createEditorial(data) {
   }
 
 
-  // -------------------------------------------------
-  // ANTRENÖR KURSU
-  // -------------------------------------------------
+  // Antrenör kursu
 
   else if (
-    normalized.includes(
+    n.includes(
       "ANTRENOR"
     ) &&
-    normalized.includes(
+    n.includes(
       "KURS"
     )
   ) {
@@ -909,12 +1233,15 @@ function createEditorial(data) {
 
     title =
       grade
+
         ? grade +
           ". Kademe yüzme antrenörlüğü kursu"
+
         : "Yüzme antrenörlüğü kursu";
 
 
-    const facts = [];
+    const facts =
+      [];
 
 
     if (
@@ -929,7 +1256,9 @@ function createEditorial(data) {
     }
 
 
-    if (eventDate) {
+    if (
+      eventDate
+    ) {
 
       facts.push(
         eventDate
@@ -963,15 +1292,13 @@ function createEditorial(data) {
   }
 
 
-  // -------------------------------------------------
-  // MASTER
-  // -------------------------------------------------
+  // Master şampiyonası
 
   else if (
-    normalized.includes(
+    n.includes(
       "MASTER"
     ) &&
-    normalized.includes(
+    n.includes(
       "SAMPIYONA"
     )
   ) {
@@ -992,9 +1319,7 @@ function createEditorial(data) {
   }
 
 
-  // -------------------------------------------------
-  // DİĞER YARIŞMA
-  // -------------------------------------------------
+  // Diğer yarışmalar
 
   else if (
     data.category ===
@@ -1002,7 +1327,7 @@ function createEditorial(data) {
   ) {
 
     title =
-      cleanDisplayTitle(
+      makeGenericEventTitle(
         data.originalTitle
       );
 
@@ -1018,9 +1343,7 @@ function createEditorial(data) {
   }
 
 
-  // -------------------------------------------------
-  // EĞİTİM
-  // -------------------------------------------------
+  // Eğitim
 
   else if (
     data.category ===
@@ -1028,7 +1351,7 @@ function createEditorial(data) {
   ) {
 
     title =
-      cleanDisplayTitle(
+      makeGenericEducationTitle(
         data.originalTitle
       );
 
@@ -1044,9 +1367,29 @@ function createEditorial(data) {
   }
 
 
-  // -------------------------------------------------
-  // DİĞER
-  // -------------------------------------------------
+  // Sporcu
+
+  else if (
+    data.category ===
+    "athlete"
+  ) {
+
+    title =
+      makeGenericAthleteTitle(
+        data.originalTitle
+      );
+
+
+    actionLabel =
+      "Sporcu Duyurusunu İncele";
+
+
+    tags.push(
+      "Sporcu"
+    );
+
+  }
+
 
   else {
 
@@ -1099,16 +1442,12 @@ function createEditorial(data) {
 
 
 // =====================================================
-// AKILLI ÖZET
+// AKILLI SPORNRD ÖZETİ
 // =====================================================
 
-function createSmartSummary(data) {
-
-  const body =
-    clean(
-      data.originalText
-    );
-
+function createSmartSummary(
+  data
+) {
 
   const title =
     normalize(
@@ -1116,9 +1455,27 @@ function createSmartSummary(data) {
     );
 
 
-  // -------------------------------------------------
-  // SEM SONUÇ HABERİ
-  // -------------------------------------------------
+  const body =
+    clean(
+      data.originalText
+    );
+
+
+  const range =
+    extractDateRange(
+      data.originalTitle +
+      " " +
+      body
+    );
+
+
+  const businessDays =
+    extractBusinessDays(
+      body
+    );
+
+
+  // SEM kayıt sonucu
 
   if (
     title.includes(
@@ -1129,435 +1486,382 @@ function createSmartSummary(data) {
     )
   ) {
 
-    const first =
-      findSentence(
-        body,
-        [
-          "kayıt hakkı kazanan",
-          "listesi"
-        ]
-      );
+    let first =
+      "TYF, SEM yüzme branşında kayıt hakkı kazanan sporcuları duyurdu.";
 
 
-    const second =
-      findSentence(
-        body,
-        [
-          "10 iş günü",
-          "kayıt işlemlerini"
-        ]
-      );
-
-
-    const result =
-      joinSentences(
-        first,
-        second
-      );
-
-
-    if (result) {
-
-      return shorten(
-        result,
-        360
-      );
-
-    }
-
-  }
-
-
-  // -------------------------------------------------
-  // BAŞVURU
-  // -------------------------------------------------
-
-  if (
-    title.includes(
-      "BASVURU"
-    ) ||
-    body.toLocaleLowerCase("tr-TR")
-      .includes(
-        "başvuru"
+    if (
+      range &&
+      /e-?devlet/i.test(
+        body
       )
-  ) {
+    ) {
 
-    const sentences =
-      bestSentences(
-        body,
-        [
-          "başvuru",
-          "e-devlet",
-          "tarih",
-          "gerekmektedir",
-          "kriter"
-        ],
-        2
-      );
-
-
-    if (sentences) {
-
-      return shorten(
-        sentences,
-        360
-      );
+      first =
+        range +
+        " tarihleri arasında e-Devlet üzerinden yapılan başvuruların ardından SEM yüzme branşında kayıt hakkı kazanan sporcular açıklandı.";
 
     }
 
-  }
+
+    let second =
+      "Kayıt ve gerekli belgeler için ilgili Gençlik ve Spor İl Müdürlüğü ile iletişime geçilmesi gerekiyor.";
 
 
-  // -------------------------------------------------
-  // GERÇEK HABER METNİ VARSA
-  // -------------------------------------------------
+    if (
+      businessDays
+    ) {
 
-  if (
-    body.length >= 80
-  ) {
-
-    const sentences =
-      bestSentences(
-        body,
-        [
-          "gerekmektedir",
-          "başvuru",
-          "kayıt",
-          "tarih",
-          "sporcu",
-          "antrenör",
-          "şampiyona",
-          "müsabaka",
-          "duyurulur"
-        ],
-        2
-      );
-
-
-    if (sentences) {
-
-      return shorten(
-        sentences,
-        360
-      );
+      second =
+        "Hak kazanan sporcuların kayıt işlemlerini " +
+        businessDays +
+        " iş günü içinde tamamlaması gerekiyor.";
 
     }
 
 
     return shorten(
-      body,
+      first +
+      " " +
+      second,
+      360
+    );
+
+  }
+
+
+  // Antrenör kursu
+
+  if (
+    title.includes(
+      "ANTRENOR"
+    ) &&
+    title.includes(
+      "KURS"
+    )
+  ) {
+
+    const grade =
+      getGrade(
+        data.originalTitle
+      );
+
+
+    const eventDate =
+      getEventDate(
+        data.originalTitle
+      );
+
+
+    const pieces =
+      [];
+
+
+    pieces.push(
+
+      "TYF, " +
+
+      (
+        grade
+          ? grade +
+            ". Kademe "
+          : ""
+      ) +
+
+      "yüzme antrenörlüğü kursuna ilişkin yeni duyuruyu yayımladı."
+
+    );
+
+
+    const facts =
+      [];
+
+
+    if (
+      eventDate
+    ) {
+
+      facts.push(
+        eventDate
+      );
+
+    }
+
+
+    if (
+      data.location !==
+      "Türkiye"
+    ) {
+
+      facts.push(
+        data.location
+      );
+
+    }
+
+
+    if (
+      facts.length
+    ) {
+
+      pieces.push(
+        "Kurs " +
+        facts.join(
+          " · "
+        ) +
+        " bilgileriyle duyuruldu."
+      );
+
+    }
+
+
+    pieces.push(
+
+      data.pdfUrl
+
+        ? "Başvuru ve katılım ayrıntıları resmî PDF duyurusunda yer alıyor."
+
+        : "Başvuru ve katılım ayrıntıları federasyonun resmî duyurusunda yer alıyor."
+
+    );
+
+
+    return shorten(
+      pieces.join(" "),
+      340
+    );
+
+  }
+
+
+  // Antrenör vize
+
+  if (
+    title.includes(
+      "ANTRENOR VIZE"
+    )
+  ) {
+
+    return (
+      "TYF, yüzme antrenörlerinin vize işlemlerine ilişkin yeni bilgilendirme yayımladı. " +
+      "İşlem koşulları ve gerekli adımlar resmî duyuruda yer alıyor."
+    );
+
+  }
+
+
+  // TOHM
+
+  if (
+    title.includes(
+      "TOHM"
+    ) &&
+    title.includes(
+      "BASVURU"
+    )
+  ) {
+
+    return (
+      "TYF, TOHM sporcu başvurularına ilişkin yeni bilgilendirme yayımladı. " +
+      "Başvuru koşulları, tarihler ve gerekli belgeler için resmî duyurunun kontrol edilmesi gerekiyor."
+    );
+
+  }
+
+
+  // Yarışma
+
+  if (
+    data.category ===
+    "event"
+  ) {
+
+    const cleanTitle =
+      stripBilingualTail(
+        data.originalTitle
+      );
+
+
+    return shorten(
+
+      "TYF, " +
+      toSentenceCase(
+        cleanTitle
+      ) +
+      " için yeni yarışma duyurusunu yayımladı. " +
+      "Katılım, tarih ve organizasyon ayrıntıları resmî kaynakta yer alıyor.",
+
+      340
+
+    );
+
+  }
+
+
+  // Eğitim
+
+  if (
+    data.category ===
+    "education"
+  ) {
+
+    return shorten(
+
+      "TYF, yüzme camiasına yönelik yeni eğitim veya seminer duyurusunu yayımladı. " +
+      "Tarih, katılım ve başvuru ayrıntıları resmî kaynakta yer alıyor.",
+
       320
+
     );
 
   }
 
 
-  // -------------------------------------------------
-  // METİN YETERSİZSE GERÇEK BAŞLIK BİLGİLERİ
-  // -------------------------------------------------
-
-  const facts = [];
-
-
-  const eventDate =
-    getEventDate(
-      data.originalTitle
-    );
-
-
-  if (eventDate) {
-
-    facts.push(
-      "Tarih: " +
-      eventDate +
-      "."
-    );
-
-  }
-
+  // Sporcu
 
   if (
-    data.location &&
-    data.location !==
-    "Türkiye"
+    data.category ===
+    "athlete"
   ) {
 
-    facts.push(
-      "Yer: " +
-      data.location +
-      "."
+    return shorten(
+
+      "TYF, sporcuları ilgilendiren yeni bir resmî duyuru yayımladı. " +
+      "Başvuru, kayıt veya katılım ayrıntıları için federasyon kaynağının kontrol edilmesi gerekiyor.",
+
+      320
+
     );
 
   }
 
 
+  // Diğer içerikler
+
   if (
-    data.pdfUrl
+    body.length >= 60
   ) {
 
-    facts.push(
-      "Ayrıntılar federasyonun resmî duyurusunda yer alıyor."
-    );
+    const facts =
+      bestSentences(
+        body,
+        [
+          "başvuru",
+          "kayıt",
+          "gerekmektedir",
+          "tarih",
+          "sporcu",
+          "antrenör",
+          "şampiyona",
+          "müsabaka"
+        ],
+        2
+      );
+
+
+    if (
+      facts
+    ) {
+
+      return shorten(
+        facts,
+        320
+      );
+
+    }
 
   }
 
 
   return (
-    "Türkiye Yüzme Federasyonu yeni bir resmî duyuru yayımladı. " +
-    facts.join(" ")
-  ).trim();
+    "Türkiye Yüzme Federasyonu yeni bir resmî spor duyurusu yayımladı. " +
+    "Ayrıntılar federasyonun resmî kaynağında yer alıyor."
+  );
 
 }
 
 
 // =====================================================
-// EN ÖNEMLİ CÜMLELER
+// BAŞLIK ÜRETİMİ
 // =====================================================
 
-function bestSentences(
-  text,
-  keywords,
-  count
-) {
-
-  const sentences =
-    splitSentences(
-      text
-    );
-
-
-  const ranked =
-    sentences.map(
-      function (sentence, index) {
-
-        const lower =
-          sentence.toLocaleLowerCase(
-            "tr-TR"
-          );
-
-
-        let score =
-          0;
-
-
-        for (
-          const keyword
-          of keywords
-        ) {
-
-          if (
-            lower.includes(
-              keyword.toLocaleLowerCase(
-                "tr-TR"
-              )
-            )
-          ) {
-
-            score += 3;
-
-          }
-
-        }
-
-
-        if (
-          /\d/.test(
-            sentence
-          )
-        ) {
-
-          score += 1;
-
-        }
-
-
-        return {
-
-          sentence:
-            sentence,
-
-          index:
-            index,
-
-          score:
-            score
-
-        };
-
-      }
-    );
-
-
-  const chosen =
-    ranked
-
-      .filter(
-        item =>
-          item.score > 0
-      )
-
-      .sort(
-        (a, b) =>
-          b.score - a.score
-      )
-
-      .slice(
-        0,
-        count
-      )
-
-      .sort(
-        (a, b) =>
-          a.index - b.index
-      )
-
-      .map(
-        item =>
-          item.sentence
-      );
-
-
-  return chosen.join(" ");
-
-}
-
-
-// =====================================================
-// CÜMLE BUL
-// =====================================================
-
-function findSentence(
-  text,
-  keywords
-) {
-
-  const sentences =
-    splitSentences(
-      text
-    );
-
-
-  for (
-    const sentence
-    of sentences
-  ) {
-
-    const lower =
-      sentence.toLocaleLowerCase(
-        "tr-TR"
-      );
-
-
-    for (
-      const keyword
-      of keywords
-    ) {
-
-      if (
-        lower.includes(
-          keyword.toLocaleLowerCase(
-            "tr-TR"
-          )
-        )
-      ) {
-
-        return sentence;
-
-      }
-
-    }
-
-  }
-
-
-  return "";
-
-}
-
-
-// =====================================================
-// HABER METNİ
-// =====================================================
-
-function getBody(
-  html,
+function makeGenericEventTitle(
   title
 ) {
 
-  const parts =
-    [];
-
-
-  const regex =
-    /<(p|h2|h3|h4)\b[^>]*>([\s\S]*?)<\/\1>/gi;
-
-
-  let match;
-
-
-  while (
-    (match = regex.exec(html)) !== null
-  ) {
-
-    const text =
-      clean(
-        match[2]
-      );
-
-
-    if (
-      text.length < 20
-    ) {
-
-      continue;
-
-    }
-
-
-    if (
-      normalize(text) ===
-      normalize(title)
-    ) {
-
-      continue;
-
-    }
-
-
-    const value =
-      normalize(text);
-
-
-    if (
-      value.includes(
-        "TUM HAKLARI"
-      ) ||
-      value.includes(
-        "CEREZ"
-      ) ||
-      value.includes(
-        "KVKK"
-      )
-    ) {
-
-      continue;
-
-    }
-
-
-    parts.push(text);
-
-  }
-
-
-  return [
-    ...new Set(parts)
-  ]
-    .join(" ")
-    .slice(
-      0,
-      2500
+  const cleanTitle =
+    stripBilingualTail(
+      title
     );
+
+
+  const text =
+    cleanDisplayTitle(
+      cleanTitle
+    );
+
+
+  return text
+    .toLocaleLowerCase(
+      "tr-TR"
+    )
+    .includes(
+      "duyuru"
+    )
+
+    ? text
+
+    : text +
+      " 🏆";
+
+}
+
+
+function makeGenericEducationTitle(
+  title
+) {
+
+  return cleanDisplayTitle(
+    stripBilingualTail(
+      title
+    )
+  );
+
+}
+
+
+function makeGenericAthleteTitle(
+  title
+) {
+
+  return cleanDisplayTitle(
+    stripBilingualTail(
+      title
+    )
+  );
+
+}
+
+
+function stripBilingualTail(
+  title
+) {
+
+  return clean(
+    title
+  )
+
+    .replace(
+      /\s+INTERNATIONAL\b[\s\S]*$/i,
+      ""
+    )
+
+    .replace(
+      /\s+SHORT\s+COURSE\b[\s\S]*$/i,
+      ""
+    )
+
+    .trim();
 
 }
 
@@ -1568,14 +1872,33 @@ function getBody(
 
 function getTitle(html) {
 
-  const match =
+  const h1 =
     html.match(
       /<h1\b[^>]*>([\s\S]*?)<\/h1>/i
     );
 
 
-  return match
-    ? clean(match[1])
+  if (
+    h1
+  ) {
+
+    return clean(
+      h1[1]
+    );
+
+  }
+
+
+  const og =
+    html.match(
+      /<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i
+    );
+
+
+  return og
+    ? clean(
+        og[1]
+      )
     : "";
 
 }
@@ -1585,27 +1908,41 @@ function getTitle(html) {
 // TARİH
 // =====================================================
 
-function getDate(html) {
+function getDate(
+  region
+) {
+
+  const text =
+    clean(region);
+
 
   const regex =
     /(\d{1,2})\s+(Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık)\s+(20\d{2})/i;
 
 
   const match =
-    html.match(regex);
+    text.match(
+      regex
+    );
 
 
   if (!match) {
 
     return {
-      text: "",
-      time: 0
+
+      text:
+        "",
+
+      time:
+        0
+
     };
 
   }
 
 
   const months = [
+
     "OCAK",
     "SUBAT",
     "MART",
@@ -1618,6 +1955,7 @@ function getDate(html) {
     "EKIM",
     "KASIM",
     "ARALIK"
+
   ];
 
 
@@ -1664,18 +2002,39 @@ function getDate(html) {
 
 function getImage(html) {
 
-  const og =
-    html.match(
-      /property=["']og:image["'][^>]*content=["']([^"']+)["']/i
-    );
+  const patterns = [
+
+    /<meta\b[^>]*(?:property|name)=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+
+    /<meta\b[^>]*content=["']([^"']+)["'][^>]*(?:property|name)=["']og:image["'][^>]*>/i
+
+  ];
 
 
-  if (og) {
+  for (
+    const pattern
+    of patterns
+  ) {
+
+    const match =
+      html.match(
+        pattern
+      );
+
+
+    if (!match) {
+
+      continue;
+
+    }
+
 
     try {
 
       return new URL(
-        decode(og[1]),
+        decodeEntities(
+          match[1]
+        ),
         BASE
       ).href;
 
@@ -1694,7 +2053,11 @@ function getImage(html) {
 
 
   return direct
-    ? decode(direct[0])
+
+    ? decodeEntities(
+        direct[0]
+      )
+
     : "";
 
 }
@@ -1704,11 +2067,13 @@ function getImage(html) {
 // PDF
 // =====================================================
 
-function getPdf(html) {
+function getPdf(
+  region
+) {
 
   const match =
-    html.match(
-      /href=["']([^"']+\.pdf[^"']*)["']/i
+    region.match(
+      /href=["']([^"']+\.pdf(?:\?[^"']*)?)["']/i
     );
 
 
@@ -1722,7 +2087,9 @@ function getPdf(html) {
   try {
 
     return new URL(
-      decode(match[1]),
+      decodeEntities(
+        match[1]
+      ),
       BASE
     ).href;
 
@@ -1738,60 +2105,80 @@ function getPdf(html) {
 
 
 // =====================================================
-// ŞEHİR
+// KONUM
 // =====================================================
 
-function getLocation(value) {
+function getLocation(
+  title,
+  body
+) {
 
-  const text =
-    normalize(value);
+  const titleText =
+    normalize(
+      title
+    );
 
 
-  const cities = [
-
-    ["ANKARA", "Ankara"],
-
-    ["ISTANBUL", "İstanbul"],
-
-    ["IZMIR", "İzmir"],
-
-    ["BURSA", "Bursa"],
-
-    ["ANTALYA", "Antalya"],
-
-    ["AYDIN", "Aydın"],
-
-    ["SAMSUN", "Samsun"],
-
-    ["TRABZON", "Trabzon"],
-
-    ["KONYA", "Konya"],
-
-    ["MERSIN", "Mersin"],
-
-    ["ORDU", "Ordu"],
-
-    ["NIGDE", "Niğde"],
-
-    ["KUTAHYA", "Kütahya"],
-
-    ["DIYARBAKIR", "Diyarbakır"]
-
-  ];
-
+  // Başlıkta şehir varsa güvenilir
 
   for (
-    const city
-    of cities
+    const [
+      key,
+      value
+    ]
+    of CITY_MAP
   ) {
 
     if (
-      text.includes(
-        city[0]
+      titleText.includes(
+        key
       )
     ) {
 
-      return city[1];
+      return value;
+
+    }
+
+  }
+
+
+  const bodyText =
+    normalize(
+      body
+    );
+
+
+  // Metinde açık biçimde:
+  // Ankara'da, Ankara ilinde vb.
+
+  for (
+    const [
+      key,
+      value
+    ]
+    of CITY_MAP
+  ) {
+
+    const pattern =
+      new RegExp(
+
+        "\\b" +
+        key +
+        "\\b" +
+        "(?:'?(?:DA|DE|TA|TE)|\\s+ILINDE|\\s+ILINDEKI)",
+
+        "i"
+
+      );
+
+
+    if (
+      pattern.test(
+        bodyText
+      )
+    ) {
+
+      return value;
 
     }
 
@@ -1807,7 +2194,9 @@ function getLocation(value) {
 // KADEME
 // =====================================================
 
-function getGrade(title) {
+function getGrade(
+  title
+) {
 
   const match =
     String(title)
@@ -1827,7 +2216,9 @@ function getGrade(title) {
 // ETKİNLİK TARİHİ
 // =====================================================
 
-function getEventDate(title) {
+function getEventDate(
+  value
+) {
 
   const months =
     "Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık";
@@ -1835,19 +2226,26 @@ function getEventDate(title) {
 
   const range =
     new RegExp(
+
       "(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})\\s+(" +
       months +
       ")\\s+(20\\d{2})",
+
       "i"
+
     );
 
 
   const match =
-    String(title)
-      .match(range);
+    String(value)
+      .match(
+        range
+      );
 
 
-  if (match) {
+  if (
+    match
+  ) {
 
     return (
       match[1] +
@@ -1868,32 +2266,273 @@ function getEventDate(title) {
 
 
 // =====================================================
-// ACİL / ÖNEMLİ
+// TARİH ARALIĞI
 // =====================================================
 
-function detectUrgency(text) {
+function extractDateRange(
+  value
+) {
 
-  const value =
-    normalize(text);
+  const text =
+    clean(
+      value
+    );
+
+
+  const months =
+    "Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|Eylül|Ekim|Kasım|Aralık";
+
+
+  const regex =
+    new RegExp(
+
+      "(\\d{1,2})\\s*[-–]\\s*(\\d{1,2})\\s+(" +
+      months +
+      ")\\s+(20\\d{2})",
+
+      "i"
+
+    );
+
+
+  const match =
+    text.match(
+      regex
+    );
+
+
+  if (!match) {
+
+    return "";
+
+  }
 
 
   return (
-    value.includes(
-      "SON BASVURU"
-    ) ||
-    value.includes(
-      "10 IS GUNU"
-    ) ||
-    value.includes(
-      "SON TARIH"
-    )
+    Number(
+      match[1]
+    ) +
+    "–" +
+    Number(
+      match[2]
+    ) +
+    " " +
+    match[3] +
+    " " +
+    match[4]
   );
 
 }
 
 
 // =====================================================
-// YARDIMCILAR
+// İŞ GÜNÜ
+// =====================================================
+
+function extractBusinessDays(
+  value
+) {
+
+  const match =
+    clean(
+      value
+    )
+      .match(
+        /(\d+)\s*iş\s*günü/i
+      );
+
+
+  return match
+    ? match[1]
+    : "";
+
+}
+
+
+// =====================================================
+// ÖNEMLİLİK
+// =====================================================
+
+function detectUrgency(
+  text
+) {
+
+  const value =
+    normalize(
+      text
+    );
+
+
+  return (
+
+    value.includes(
+      "SON BASVURU"
+    ) ||
+
+    value.includes(
+      "10 IS GUNU"
+    ) ||
+
+    value.includes(
+      "SON TARIH"
+    )
+
+  );
+
+}
+
+
+// =====================================================
+// EN ÖNEMLİ CÜMLELER
+// =====================================================
+
+function bestSentences(
+  text,
+  keywords,
+  count
+) {
+
+  const sentences =
+    splitSentences(
+      text
+    );
+
+
+  const ranked =
+    sentences.map(
+      (sentence, index) => {
+
+        const lower =
+          sentence
+            .toLocaleLowerCase(
+              "tr-TR"
+            );
+
+
+        let score =
+          0;
+
+
+        for (
+          const keyword
+          of keywords
+        ) {
+
+          if (
+            lower.includes(
+
+              keyword
+                .toLocaleLowerCase(
+                  "tr-TR"
+                )
+
+            )
+          ) {
+
+            score += 3;
+
+          }
+
+        }
+
+
+        if (
+          /\d/.test(
+            sentence
+          )
+        ) {
+
+          score += 1;
+
+        }
+
+
+        return {
+
+          sentence:
+            sentence,
+
+          index:
+            index,
+
+          score:
+            score
+
+        };
+
+      }
+    );
+
+
+  return ranked
+
+    .filter(
+      item =>
+        item.score > 0
+    )
+
+    .sort(
+      (a, b) =>
+        b.score -
+        a.score
+    )
+
+    .slice(
+      0,
+      count
+    )
+
+    .sort(
+      (a, b) =>
+        a.index -
+        b.index
+    )
+
+    .map(
+      item =>
+        item.sentence
+    )
+
+    .join(" ");
+
+}
+
+
+// =====================================================
+// CÜMLELERE AYIR
+// =====================================================
+
+function splitSentences(
+  text
+) {
+
+  const matches =
+    String(
+      text || ""
+    )
+      .match(
+        /[^.!?]+[.!?]+|[^.!?]+$/g
+      );
+
+
+  return matches
+
+    ? matches
+        .map(
+          item =>
+            item.trim()
+        )
+        .filter(
+          Boolean
+        )
+
+    : [];
+
+}
+
+
+// =====================================================
+// KELİME KONTROL
 // =====================================================
 
 function hasAny(
@@ -1911,80 +2550,87 @@ function hasAny(
 }
 
 
-function splitSentences(text) {
-
-  const matches =
-    String(text || "")
-      .match(
-        /[^.!?]+[.!?]+|[^.!?]+$/g
-      );
-
-
-  return matches
-    ? matches
-        .map(
-          item =>
-            item.trim()
-        )
-        .filter(Boolean)
-    : [];
-
-}
-
-
-function joinSentences(
-  first,
-  second
-) {
-
-  if (
-    first &&
-    second &&
-    first !== second
-  ) {
-
-    return (
-      first +
-      " " +
-      second
-    );
-
-  }
-
-
-  return (
-    first ||
-    second ||
-    ""
-  );
-
-}
-
+// =====================================================
+// BAŞLIK TEMİZLE
+// =====================================================
 
 function cleanDisplayTitle(
   title
 ) {
 
   const text =
-    clean(title);
+    clean(
+      title
+    );
 
 
   if (
-    text.length <= 95
+    text.length <= 105
   ) {
 
-    return text;
+    return toSentenceCase(
+      text
+    );
 
   }
 
 
   return shorten(
-    text,
-    95
+
+    toSentenceCase(
+      text
+    ),
+
+    105
+
   );
 
 }
 
+
+// =====================================================
+// CÜMLE BİÇİMİ
+// =====================================================
+
+function toSentenceCase(
+  value
+) {
+
+  const text =
+    clean(
+      value
+    );
+
+
+  if (!text) {
+
+    return "";
+
+  }
+
+
+  const lower =
+    text.toLocaleLowerCase(
+      "tr-TR"
+    );
+
+
+  return (
+    lower
+      .charAt(0)
+      .toLocaleUpperCase(
+        "tr-TR"
+      )
+    +
+    lower.slice(1)
+  );
+
+}
+
+
+// =====================================================
+// KISALT
+// =====================================================
 
 function shorten(
   value,
@@ -1992,7 +2638,9 @@ function shorten(
 ) {
 
   const text =
-    clean(value);
+    clean(
+      value
+    );
 
 
   if (
@@ -2023,14 +2671,21 @@ function shorten(
       space > 0
         ? space
         : max
-    ) +
+    )
+    +
     "…"
   );
 
 }
 
 
-function getEmoji(category) {
+// =====================================================
+// EMOJİ
+// =====================================================
+
+function getEmoji(
+  category
+) {
 
   const values = {
 
@@ -2062,17 +2717,37 @@ function getEmoji(category) {
 }
 
 
-function clean(value) {
+// =====================================================
+// HTML TEMİZLE
+// =====================================================
 
-  return decode(
+function clean(
+  value
+) {
+
+  return decodeEntities(
     String(
-      value ||
-      ""
+      value || ""
     )
   )
 
     .replace(
+      /<script[\s\S]*?<\/script>/gi,
+      " "
+    )
+
+    .replace(
+      /<style[\s\S]*?<\/style>/gi,
+      " "
+    )
+
+    .replace(
       /<[^>]+>/g,
+      " "
+    )
+
+    .replace(
+      /[\u00A0\u2007\u202F]/g,
       " "
     )
 
@@ -2086,51 +2761,197 @@ function clean(value) {
 }
 
 
-function decode(value) {
+// =====================================================
+// HTML ENTITY ÇÖZ
+// =====================================================
+
+function decodeEntities(
+  value
+) {
+
+  const named = {
+
+    amp:
+      "&",
+
+    quot:
+      "\"",
+
+    apos:
+      "'",
+
+    nbsp:
+      " ",
+
+    lt:
+      "<",
+
+    gt:
+      ">",
+
+    uuml:
+      "ü",
+
+    Uuml:
+      "Ü",
+
+    ouml:
+      "ö",
+
+    Ouml:
+      "Ö",
+
+    ccedil:
+      "ç",
+
+    Ccedil:
+      "Ç",
+
+    scedil:
+      "ş",
+
+    Scedil:
+      "Ş",
+
+    gbreve:
+      "ğ",
+
+    Gbreve:
+      "Ğ",
+
+    Idot:
+      "İ",
+
+    inodot:
+      "ı",
+
+    rsquo:
+      "’",
+
+    lsquo:
+      "‘",
+
+    rdquo:
+      "”",
+
+    ldquo:
+      "“",
+
+    ndash:
+      "–",
+
+    mdash:
+      "—",
+
+    hellip:
+      "…"
+
+  };
+
 
   return String(
-    value ||
-    ""
+    value || ""
   )
+    .replace(
 
-    .replaceAll(
-      "&amp;",
-      "&"
-    )
+      /&(#x?[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]+);/g,
 
-    .replaceAll(
-      "&quot;",
-      "\""
-    )
+      function (
+        original,
+        entity
+      ) {
 
-    .replaceAll(
-      "&#39;",
-      "'"
-    )
+        // Sayısal HTML entity
 
-    .replaceAll(
-      "&nbsp;",
-      " "
-    )
+        if (
+          entity.charAt(0) ===
+          "#"
+        ) {
 
-    .replaceAll(
-      "&lt;",
-      "<"
-    )
+          const isHex =
+            entity
+              .charAt(1)
+              .toLowerCase() ===
+            "x";
 
-    .replaceAll(
-      "&gt;",
-      ">"
+
+          const raw =
+            isHex
+
+              ? entity.slice(2)
+
+              : entity.slice(1);
+
+
+          const code =
+            parseInt(
+              raw,
+              isHex
+                ? 16
+                : 10
+            );
+
+
+          if (
+            Number.isFinite(
+              code
+            )
+          ) {
+
+            try {
+
+              return String
+                .fromCodePoint(
+                  code
+                );
+
+            }
+
+            catch {
+
+              return original;
+
+            }
+
+          }
+
+
+          return original;
+
+        }
+
+
+        return Object
+          .prototype
+          .hasOwnProperty
+          .call(
+            named,
+            entity
+          )
+
+          ? named[
+              entity
+            ]
+
+          : original;
+
+      }
+
     );
 
 }
 
 
-function normalize(value) {
+// =====================================================
+// NORMALIZE
+// =====================================================
+
+function normalize(
+  value
+) {
 
   return String(
-    value ||
-    ""
+    value || ""
   )
 
     .toLocaleUpperCase(
@@ -2170,7 +2991,13 @@ function normalize(value) {
 }
 
 
-function makeId(value) {
+// =====================================================
+// ID
+// =====================================================
+
+function makeId(
+  value
+) {
 
   let hash =
     0;
@@ -2178,8 +3005,7 @@ function makeId(value) {
 
   const text =
     String(
-      value ||
-      ""
+      value || ""
     );
 
 
@@ -2195,8 +3021,11 @@ function makeId(value) {
           hash << 5
         ) -
         hash
-      ) +
-      text.charCodeAt(i);
+      )
+      +
+      text.charCodeAt(
+        i
+      );
 
 
     hash |= 0;
@@ -2206,11 +3035,17 @@ function makeId(value) {
 
   return (
     "tyf-" +
-    Math.abs(hash)
+    Math.abs(
+      hash
+    )
   );
 
 }
 
+
+// =====================================================
+// JSON
+// =====================================================
 
 function send(
   data,
@@ -2238,7 +3073,7 @@ function send(
           "application/json; charset=utf-8",
 
         "Cache-Control":
-          "public, max-age=300"
+          "public, max-age=180"
 
       }
 
