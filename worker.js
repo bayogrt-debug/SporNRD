@@ -3081,4 +3081,88 @@ function send(
 
   );
 
-}
+}import { getTyfFeed } from "./sources/tyf.js";
+import { recordFeedback } from "./learning/feedbackEngine.js";
+import { readLearningState } from "./learning/learningStore.js";
+import { CORS, json } from "./utils/response.js";
+
+export default {
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: CORS
+      });
+    }
+
+    const url = new URL(request.url);
+
+    if (url.pathname === "/") {
+      return json({
+        ok: true,
+        service: "SporNRD Öğrenen Spor Editörü",
+        status: "running",
+        version: "6.0.0",
+        source: "Türkiye Yüzme Federasyonu",
+        learning: env?.SPORNRD_LEARNING ? "global-kv" : "local-fallback"
+      });
+    }
+
+    if (url.pathname === "/api/tyf" && request.method === "GET") {
+      try {
+        let limit = parseInt(url.searchParams.get("limit") || "20", 10);
+        if (!Number.isFinite(limit)) limit = 20;
+        limit = Math.max(1, Math.min(limit, 30));
+
+        const feed = await getTyfFeed({ limit, env });
+
+        return json({
+          ok: true,
+          source: feed.source,
+          fetchedAt: new Date().toISOString(),
+          count: feed.items.length,
+          items: feed.items
+        }, 200, 180);
+      } catch (error) {
+        return json({
+          ok: false,
+          error: "TYF verileri alınamadı",
+          detail: String(error?.message || error)
+        }, 502);
+      }
+    }
+
+    if (url.pathname === "/api/feedback" && request.method === "POST") {
+      try {
+        const payload = await request.json();
+        const result = await recordFeedback(env, payload);
+
+        return json({
+          ok: true,
+          persisted: result.persisted,
+          mode: result.persisted ? "global-kv" : "local-fallback"
+        });
+      } catch (error) {
+        return json({
+          ok: false,
+          error: "Feedback işlenemedi",
+          detail: String(error?.message || error)
+        }, 400);
+      }
+    }
+
+    if (url.pathname === "/api/learning" && request.method === "GET") {
+      const learning = await readLearningState(env);
+      return json({
+        ok: true,
+        mode: env?.SPORNRD_LEARNING ? "global-kv" : "local-fallback",
+        learning
+      });
+    }
+
+    return json({
+      ok: false,
+      error: "Endpoint bulunamadı"
+    }, 404);
+  }
+};
